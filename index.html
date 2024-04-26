@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Audio Recorder and Streamer</title>
+</head>
+<body>
+  <h1>Record and Stream Audio</h1>
+
+  <h2>Record and Upload</h2>
+  <button id="startRecording">Start Recording</button>
+  <button id="stopRecording" disabled>Stop Recording</button>
+  <button id="uploadRecording" disabled>Upload Recording</button>
+
+  <h2>Stream Audio</h2>
+  <input type="text" id="audioKey" placeholder="Audio key to stream">
+  <button id="streamAudio">Stream Audio</button>
+  <audio id="audioPlayer" controls></audio>
+
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+
+    document.getElementById('startRecording').onclick = () => {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          mediaRecorder = new MediaRecorder(stream);
+          mediaRecorder.start();
+
+          mediaRecorder.ondataavailable = event => {
+            audioChunks.push(event.data);
+          };
+
+          document.getElementById('startRecording').disabled = true;
+          document.getElementById('stopRecording').disabled = false;
+        });
+    };
+
+    document.getElementById('stopRecording').onclick = () => {
+      mediaRecorder.stop();
+
+      mediaRecorder.onstop = () => {
+        document.getElementById('uploadRecording').disabled = false;
+        document.getElementById('stopRecording').disabled = true;
+      };
+    };
+
+    document.getElementById('uploadRecording').onclick = () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+      const reader = new FileReader();
+      reader.readAsArrayBuffer(audioBlob);
+
+      reader.onloadend = () => {
+        const arrayBuffer = reader.result;
+        fetch('/.netlify/functions/upload-audio', {
+          method: 'POST',
+          body: arrayBuffer
+        })
+          .then(response => response.text())
+          .then(text => alert(text));
+      };
+    };
+
+    document.getElementById('streamAudio').onclick = () => {
+      const key = document.getElementById('audioKey').value;
+      if (key) {
+        const audioPlayer = document.getElementById('audioPlayer');
+        audioPlayer.src = `/.netlify/functions/stream-audio?key=${key}`;
+        audioPlayer.load();
+        audioPlayer.play();
+      }
+    };
+  </script>
+</body>
+</html>
