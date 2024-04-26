@@ -1,16 +1,17 @@
 {
-  "name": "netlify-serverless-audio-app",
+  "name": "audio-blob-recorder",
   "version": "1.0.0",
-  "description": "A Node.js application to handle audio uploads and retrievals from IBM Cloud Object Storage using Netlify serverless functions.",
+  "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "echo 'Nothing to build' && exit 0"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.318.0",
-    "formidable": "^2.1.1"
-  },
-  "devDependencies": {},
-  "author": "Siddharth Mishra",
-  "license": "MIT"
+    "aws-sdk": "^2.1607.0",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1"
+  }
 }

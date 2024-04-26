@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Audio Recorder</title>
+</head>
+<body>
+  <h1>Record and Upload Audio</h1>
+  <button id="recordButton">Record</button>
+  <button id="stopButton" disabled>Stop</button>
+  <button id="uploadButton" disabled>Upload</button>
+  
+  <audio id="audioPreview" controls></audio>
+
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+
+    const recordButton = document.getElementById('recordButton');
+    const stopButton = document.getElementById('stopButton');
+    const uploadButton = document.getElementById('uploadButton');
+    const audioPreview = document.getElementById('audioPreview');
+
+    recordButton.addEventListener('click', async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunks, { type: 'audio/mpeg' }); // Adjust type if needed
+        const audioURL = URL.createObjectURL(blob);
+        audioPreview.src = audioURL;
+        
+        // Enable upload button after recording
+        uploadButton.disabled = false;
+      };
+
+      mediaRecorder.start();
+      
+      // Toggle button states
+      recordButton.disabled = true;
+      stopButton.disabled = false;
+      uploadButton.disabled = true;
+    });
+
+    stopButton.addEventListener('click', () => {
+      mediaRecorder.stop();
+      
+      // Toggle button states
+      recordButton.disabled = false;
+      stopButton.disabled = true;
+    });
+
+    uploadButton.addEventListener('click', async () => {
+      const blob = new Blob(audioChunks, { type: 'audio/mpeg' });
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.mp3'); // Adjust filename and extension if needed
+      
+      const response = await fetch('/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (result.message === 'Audio uploaded') {
+        console.log('Audio uploaded with key:', result.key);
+      }
+    });
+  </script>
+</body>
+</html>

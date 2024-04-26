@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Audio Recorder and Streamer</title>
+  <style>
+    /* Simple styling for the buttons and audio player */
+    button {
+      padding: 10px;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Record, Upload, and Stream Audio</h1>
+
+  <!-- Recording controls -->
+  <div>
+    <button id="recordButton">Start Recording</button>
+    <button id="stopButton" disabled>Stop Recording</button>
+    <button id="uploadButton" disabled>Upload Recording</button>
+  </div>
+
+  <!-- Audio preview and streaming -->
+  <div>
+    <audio id="audioPreview" controls></audio> <!-- For local preview of recorded audio -->
+  </div>
+
+  <!-- Audio streaming control -->
+  <div>
+    <input type="text" id="audioKeyInput" placeholder="Enter audio key" />
+    <button id="streamButton">Stream Audio</button>
+    <audio id="streamedAudio" controls></audio> <!-- For streaming from storage -->
+  </div>
+
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+
+    const recordButton = document.getElementById('recordButton');
+    const stopButton = document.getElementById('stopButton');
+    const uploadButton = document.getElementById('uploadButton');
+    const streamButton = document.getElementById('streamButton');
+    const audioPreview = document.getElementById('audioPreview');
+    const streamedAudio = document.getElementById('streamedAudio');
+    const audioKeyInput = document.getElementById('audioKeyInput');
+
+    // Start recording when the record button is clicked
+    recordButton.addEventListener('click', async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunks, { type: 'audio/mpeg' }); // Adjust type if needed
+        const audioURL = URL.createObjectURL(blob);
+        audioPreview.src = audioURL; // Set preview source
+
+        uploadButton.disabled = false; // Enable upload button
+      };
+
+      mediaRecorder.start();
+
+      // Disable the record button and enable stop
+      recordButton.disabled = true;
+      stopButton.disabled = false;
+      uploadButton.disabled = true;
+    });
+
+    // Stop recording when the stop button is clicked
+    stopButton.addEventListener('click', () => {
+      mediaRecorder.stop();
+
+      // Toggle button states
+      recordButton.disabled = false;
+      stopButton.disabled = true;
+    });
+
+    // Upload the recorded audio to the server
+    uploadButton.addEventListener('click', async () => {
+      const blob = new Blob(audioChunks, { type: 'audio/mpeg' });
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.mp3'); // Default name
+
+      const response = await fetch('/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (result.message === 'Audio uploaded') {
+        console.log('Audio uploaded successfully with key:', result.key);
+      }
+    });
+
+    // Stream the audio from the server using the provided key
+    streamButton.addEventListener('click', async () => {
+      const audioKey = audioKeyInput.value;
+
+      if (audioKey.trim() === '') {
+        console.error("Please enter a valid audio key.");
+        return;
+      }
+
+      const response = await fetch(`/stream/${audioKey}`);
+
+      if (response.ok) {
+        const audioBlob = await response.blob();
+        const audioURL = URL.createObjectURL(audioBlob);
+        streamedAudio.src = audioURL;
+      } else {
+        console.error("Failed to stream audio. Check if the key is correct.");
+      }
+    });
+
+  </script>
+</body>
+</html>
