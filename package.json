@@ -7,8 +7,8 @@
     "build": "echo 'Nothing to build' && exit 0"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.318.0",  // The specific version might vary
-    "formidable": "^2.1.1"              // Ensure to install a compatible version
+    "@aws-sdk/client-s3": "^3.318.0",
+    "formidable": "^2.1.1"
   },
   "devDependencies": {},
   "author": "Siddharth Mishra",
