@@ -1,75 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Audio Recorder and Streamer</title>
-</head>
-<body>
-  <h1>Record and Stream Audio</h1>
-
-  <h2>Record and Upload</h2>
-  <button id="startRecording">Start Recording</button>
-  <button id="stopRecording" disabled>Stop Recording</button>
-  <button id="uploadRecording" disabled>Upload Recording</button>
-
-  <h2>Stream Audio</h2>
-  <input type="text" id="audioKey" placeholder="Audio key to stream">
-  <button id="streamAudio">Stream Audio</button>
-  <audio id="audioPlayer" controls></audio>
-
+  <title>Audio Recorder</title>
   <script>
     let mediaRecorder;
-    let audioChunks = [];
+    let audioBlob;
 
-    document.getElementById('startRecording').onclick = () => {
+    function startRecording() {
       navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
+        .then(function (stream) {
           mediaRecorder = new MediaRecorder(stream);
-          mediaRecorder.start();
-
-          mediaRecorder.ondataavailable = event => {
-            audioChunks.push(event.data);
+          mediaRecorder.ondataavailable = function (e) {
+            audioBlob = e.data;
           };
-
-          document.getElementById('startRecording').disabled = true;
-          document.getElementById('stopRecording').disabled = false;
+          mediaRecorder.start();
         });
-    };
+    }
 
-    document.getElementById('stopRecording').onclick = () => {
-      mediaRecorder.stop();
-
-      mediaRecorder.onstop = () => {
-        document.getElementById('uploadRecording').disabled = false;
-        document.getElementById('stopRecording').disabled = true;
-      };
-    };
-
-    document.getElementById('uploadRecording').onclick = () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-      const reader = new FileReader();
-      reader.readAsArrayBuffer(audioBlob);
-
-      reader.onloadend = () => {
-        const arrayBuffer = reader.result;
-        fetch('/.netlify/functions/upload-audio', {
-          method: 'POST',
-          body: arrayBuffer
-        })
-          .then(response => response.text())
-          .then(text => alert(text));
-      };
-    };
-
-    document.getElementById('streamAudio').onclick = () => {
-      const key = document.getElementById('audioKey').value;
-      if (key) {
-        const audioPlayer = document.getElementById('audioPlayer');
-        audioPlayer.src = `/.netlify/functions/stream-audio?key=${key}`;
-        audioPlayer.load();
-        audioPlayer.play();
+    function stopRecording() {
+      if (mediaRecorder) {
+        mediaRecorder.stop();
       }
-    };
+    }
+
+    async function uploadAudio() {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.wav');
+      await fetch('/api/upload-audio', {
+        method: 'POST',
+        body: formData,
+      });
+    }
+
+    async function playAudio() {
+      const response = await fetch('/api/get-audio');
+      const audio = new Audio(URL.createObjectURL(await response.blob()));
+      audio.play();
+    }
   </script>
+</head>
+<body>
+  <button onclick="startRecording()">Start Recording</button>
+  <button onclick="stopRecording()">Stop Recording</button>
+  <button onclick="uploadAudio()">Upload Audio</button>
+  <button onclick="playAudio()">Play Audio</button>
 </body>
 </html>
